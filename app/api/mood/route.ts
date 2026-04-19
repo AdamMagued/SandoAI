@@ -30,7 +30,7 @@ Return STRICT JSON only, no markdown, no explanation:
     ]);
 
     const raw = result.response.text().trim();
-    const cleaned = raw.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+    const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const parsed = JSON.parse(cleaned);
 
     return Response.json(parsed);

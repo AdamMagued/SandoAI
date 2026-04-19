@@ -61,10 +61,12 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
 
   const captureFrame = useCallback((): string | null => {
     if (!videoRef.current || !canvasRef.current) return null;
+    const video = videoRef.current;
+    if (!video.videoWidth || !video.videoHeight) return null;
     const canvas = canvasRef.current;
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")?.drawImage(video, 0, 0);
     return canvas.toDataURL("image/jpeg", 0.8);
   }, []);
 

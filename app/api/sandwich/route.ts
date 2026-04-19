@@ -24,7 +24,7 @@ What sandwich does this person desperately need?`;
     const result = await model.generateContent(prompt);
 
     const raw = result.response.text().trim();
-    const cleaned = raw.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+    const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const verdict = JSON.parse(cleaned);
 
     // Fire-and-forget to telemetry (Lakshay's endpoint)

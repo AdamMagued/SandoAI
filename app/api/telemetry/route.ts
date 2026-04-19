@@ -15,16 +15,16 @@ export async function POST(request: NextRequest) {
       confidence: body.confidence ?? 0,
     };
 
-    // Insert to Snowflake
-    await insertEvent(event);
-
-    // Forward to Mo's ticker (fire-and-forget)
+    // Forward to Mo's ticker (fire-and-forget, runs regardless of Snowflake)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     fetch(`${appUrl}/api/ticker`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(event),
     }).catch(() => {});
+
+    // Insert to Snowflake
+    await insertEvent(event);
 
     return Response.json({ ok: true });
   } catch (error) {
