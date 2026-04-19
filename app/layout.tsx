@@ -27,7 +27,35 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-background text-foreground selection:bg-foreground selection:text-background">
+        <div className="scanline" />
+        <header className="border-b border-foreground/20 p-4 sticky top-0 bg-background/80 backdrop-blur-md z-40">
+          <nav className="max-w-7xl mx-auto flex justify-between items-center px-4">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold terminal-glow cursor-default">
+                SANDWICH<span className="flicker">AI</span>_v2
+              </span>
+            </div>
+            <div className="flex gap-8 font-mono text-sm">
+              <a href="/" className="hover:text-background hover:bg-foreground px-2 py-1 transition-colors">
+                [ HOME ]
+              </a>
+              <a href="/enterprise" className="hover:text-background hover:bg-foreground px-2 py-1 transition-colors">
+                [ ENTERPRISE ]
+              </a>
+              <a href="/ticker" className="hover:text-background hover:bg-foreground px-2 py-1 transition-colors">
+                [ TICKER ]
+              </a>
+            </div>
+          </nav>
+        </header>
+        <main className="flex-grow relative">
+          {children}
+        </main>
+        <footer className="border-t border-foreground/20 p-4 text-center font-mono text-xs opacity-50">
+          &copy; 2026 GLOBAL DIETARY TELEMETRY NETWORK | SECURED BY SOLANA
+        </footer>
+      </body>
     </html>
   );
 }
