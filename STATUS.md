@@ -85,7 +85,7 @@ Required for full functionality (set in `.env.local` for dev, in App Platform fo
 
 ```
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-flash-latest      # optional override
+GEMINI_MODEL=gemini-2.5-flash         # optional override (default in code)
 ELEVENLABS_API_KEY=
 ELEVENLABS_VOICE_ID=
 # Weather: Open-Meteo is keyless. No WEATHER_API_KEY needed.

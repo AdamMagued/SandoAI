@@ -46,7 +46,7 @@ async function checkGemini() {
   if (!key) return { ok: false, reason: "missing" };
   try {
     const genAI = new GoogleGenerativeAI(key);
-    const modelName = process.env.GEMINI_MODEL || "gemini-flash-latest";
+    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
     const model = genAI.getGenerativeModel({ model: modelName });
     const r = await model.generateContent("Reply with the single word: OK");
     const text = r.response.text();
