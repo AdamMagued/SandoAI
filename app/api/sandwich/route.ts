@@ -1,4 +1,4 @@
-import { geminiFlash } from "@/lib/gemini";
+import { getSandwichModel } from "@/lib/gemini";
 import { NextRequest } from "next/server";
 
 const SYSTEM_PROMPT = `You are the world's most dramatic sandwich advisor. Given a mood and weather, reason deeply about what sandwich this person needs. Be philosophical and absurd.
@@ -20,10 +20,8 @@ Weather: ${weather.condition}, ${weather.temp}°C, severity: ${weather.severity}
 
 What sandwich does this person desperately need?`;
 
-    const result = await geminiFlash.generateContent([
-      { text: SYSTEM_PROMPT },
-      { text: prompt },
-    ]);
+    const model = getSandwichModel(SYSTEM_PROMPT);
+    const result = await model.generateContent(prompt);
 
     const raw = result.response.text().trim();
     const cleaned = raw.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();

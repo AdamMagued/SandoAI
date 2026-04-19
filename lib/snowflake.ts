@@ -1,4 +1,4 @@
-import snowflake from "snowflake-sdk";
+import * as snowflake from "snowflake-sdk";
 
 // Suppress noisy SDK logs
 snowflake.configure({ logLevel: "ERROR" });

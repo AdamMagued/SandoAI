@@ -7,8 +7,7 @@ export async function GET(request: NextRequest) {
     const apiKey = process.env.WEATHER_API_KEY!;
 
     const res = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`,
-      { next: { revalidate: 300 } }
+      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`
     );
 
     if (!res.ok) {
@@ -21,8 +20,8 @@ export async function GET(request: NextRequest) {
 
     let severity = "mild";
     if (condition.includes("thunder") || condition.includes("storm")) severity = "severe";
-    else if (condition.includes("rain") || condition.includes("snow")) severity = "moderate";
-    else if (condition.includes("cloud") || condition.includes("overcast")) severity = "mild";
+    else if (condition.includes("rain") || condition.includes("drizzle") || condition.includes("snow")) severity = "moderate";
+    else if (condition.includes("cloud") || condition.includes("overcast") || condition.includes("mist") || condition.includes("fog")) severity = "mild";
     else severity = "clear";
 
     return Response.json({ condition, temp, severity, city });
