@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
+import { buildWeatherQuery, getBrowserCoords } from "@/lib/clientLocation";
 
 interface MoodResult {
   mood: string;
@@ -9,9 +10,16 @@ interface MoodResult {
 
 interface WeatherResult {
   condition: string;
+  description?: string;
   temp: number;
   severity: string;
   city: string;
+  latitude?: number;
+  longitude?: number;
+  isDay?: boolean;
+  localHour?: number;
+  localTimeIso?: string;
+  timeOfDay?: "early_morning" | "midday" | "afternoon" | "evening" | "night";
 }
 
 interface SandwichVerdict {
@@ -19,6 +27,7 @@ interface SandwichVerdict {
   reasoning: string;
   confidence: number;
   urgency: string;
+  ingredients?: string[];
 }
 
 interface WebcamProps {
@@ -38,23 +47,53 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
   const [fallbackMood, setFallbackMood] = useState("");
 
   useEffect(() => {
+    let activeStream: MediaStream | null = null;
+    let cancelled = false;
+
     async function startCamera() {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        if (!cancelled) {
+          setCameraError("Camera API not supported. Use mood selector below.");
+        }
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        activeStream = stream;
+        // Flip `streaming` first so the <video> element renders, then attach
+        // the stream once React has mounted the node.
+        setStreaming(true);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          setStreaming(true);
+          try {
+            await videoRef.current.play();
+          } catch {
+            // play() may reject on some browsers when called before user gesture;
+            // autoPlay attribute will pick up the slack.
+          }
         }
-      } catch {
-        setCameraError("Camera not available. Use mood selector below.");
+      } catch (err) {
+        if (cancelled) return;
+        const name = (err as { name?: string })?.name ?? "";
+        const message =
+          name === "NotAllowedError"
+            ? "Camera permission denied. Use mood selector below."
+            : name === "NotFoundError"
+            ? "No camera detected. Use mood selector below."
+            : "Camera not available. Use mood selector below.";
+        setCameraError(message);
       }
     }
     startCamera();
 
     return () => {
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((t) => t.stop());
+      cancelled = true;
+      if (activeStream) {
+        activeStream.getTracks().forEach((t) => t.stop());
       }
     };
   }, []);
@@ -124,9 +163,16 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
       }
       setMood(detectedMood);
 
-      // Step 2: Get weather
-      setStatus("Consulting the atmospheric data stream...");
-      const weatherRes = await fetch("/api/weather?city=Cairo");
+      // Step 2: Get weather (browser geolocation → Open-Meteo, no API key)
+      setStatus("Locating you on the global culinary grid...");
+      const coords = await getBrowserCoords(4500);
+      const qs = buildWeatherQuery(coords);
+      setStatus(
+        coords
+          ? "Consulting the atmospheric data stream..."
+          : "Geolocation unavailable — falling back to default region..."
+      );
+      const weatherRes = await fetch(`/api/weather${qs ? `?${qs}` : ""}`);
       const weather: WeatherResult = await weatherRes.json();
 
       // Step 3: Get sandwich verdict
@@ -162,17 +208,16 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
   return (
     <div className="flex flex-col items-center gap-4 w-full">
       <div className="relative w-full max-w-md rounded-lg overflow-hidden border border-zinc-700 bg-black">
-        {streaming ? (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full"
-          />
-        ) : (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className={`w-full ${streaming ? "" : "hidden"}`}
+        />
+        {!streaming && (
           <div className="flex items-center justify-center h-48 text-zinc-500 text-sm">
-            {cameraError || "Camera unavailable"}
+            {cameraError || "Initializing camera..."}
           </div>
         )}
         <canvas ref={canvasRef} className="hidden" />

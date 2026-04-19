@@ -1,4 +1,5 @@
 import { insertEvent, SandwichEvent } from "@/lib/snowflake";
+import { persistEvent } from "@/lib/mongo";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -13,9 +14,14 @@ export async function POST(request: NextRequest) {
       sandwich: body.sandwich ?? "unknown",
       reasoning: body.reasoning ?? "",
       confidence: body.confidence ?? 0,
+      geolocation: typeof body.geolocation === "string" ? body.geolocation : undefined,
+      ingredients: Array.isArray(body.ingredients)
+        ? body.ingredients.filter((v: unknown): v is string => typeof v === "string").slice(0, 6)
+        : undefined,
+      timeOfDay: typeof body.timeOfDay === "string" ? body.timeOfDay : undefined,
     };
 
-    // Forward to Mo's ticker (fire-and-forget, runs regardless of Snowflake)
+    // Fan-out to the live ticker (fire-and-forget, runs regardless of warehouse status).
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     fetch(`${appUrl}/api/ticker`, {
       method: "POST",
@@ -23,13 +29,19 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(event),
     }).catch(() => {});
 
-    // Insert to Snowflake
-    await insertEvent(event);
+    // Dual-write: Snowflake (warehouse / Cortex) + MongoDB (live feed history).
+    const results = await Promise.allSettled([
+      insertEvent(event),
+      persistEvent(event),
+    ]);
 
-    return Response.json({ ok: true });
+    const snowflakeOk = results[0].status === "fulfilled";
+    const mongoOk = results[1].status === "fulfilled" && results[1].value === true;
+
+    return Response.json({ ok: true, snowflake: snowflakeOk, mongo: mongoOk });
   } catch (error) {
     console.error("Telemetry error:", error);
-    // Return ok so the main flow isn't blocked
+    // Return ok-shaped response so the caller's main flow isn't blocked.
     return Response.json({ ok: false, error: "Telemetry pipeline temporarily offline" });
   }
 }

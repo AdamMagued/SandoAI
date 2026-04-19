@@ -11,6 +11,9 @@ export interface SandwichEvent {
   sandwich: string;
   reasoning: string;
   confidence: number;
+  geolocation?: string;
+  ingredients?: string[];
+  timeOfDay?: string;
 }
 
 function getConnection() {
@@ -33,8 +36,8 @@ export async function insertEvent(event: SandwichEvent): Promise<void> {
 
     await new Promise<void>((resolve, reject) => {
       conn.execute({
-        sqlText: `INSERT INTO sandwich_events (id, timestamp, mood, weather, sandwich, reasoning, confidence)
-                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        sqlText: `INSERT INTO sandwich_events (id, timestamp, mood, weather, sandwich, reasoning, confidence, geolocation)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         binds: [
           event.id,
           event.timestamp,
@@ -43,6 +46,7 @@ export async function insertEvent(event: SandwichEvent): Promise<void> {
           event.sandwich,
           event.reasoning,
           event.confidence,
+          event.geolocation ?? null,
         ],
         complete: (err) => (err ? reject(err) : resolve()),
       });
@@ -76,14 +80,23 @@ export async function queryCortex(question: string): Promise<CortexResult> {
       });
     });
 
-    const raw = rows?.[0]?.RESPONSE as string;
-    const cleaned = raw?.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
-    const parsed = JSON.parse(cleaned);
+    const raw = rows?.[0]?.RESPONSE;
+    if (typeof raw !== "string" || raw.length === 0) {
+      throw new Error("Cortex returned empty response");
+    }
+    const cleaned = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+
+    let parsed: { sql?: string; insight: string; data?: Record<string, unknown>[] };
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      throw new Error("Cortex returned non-JSON response");
+    }
 
     if (parsed.sql) {
       const dataRows = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
         conn.execute({
-          sqlText: parsed.sql,
+          sqlText: parsed.sql!,
           complete: (err, _stmt, rows) =>
             err ? reject(err) : resolve(rows as Record<string, unknown>[]),
         });
@@ -92,7 +105,8 @@ export async function queryCortex(question: string): Promise<CortexResult> {
     }
 
     return parsed;
-  } catch {
+  } catch (err) {
+    console.error("Cortex error:", err);
     throw new Error("Cortex query failed");
   } finally {
     conn.destroy(() => {});
