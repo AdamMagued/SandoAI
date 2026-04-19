@@ -30,8 +30,10 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [streaming, setStreaming] = useState(false);
+  const [cameraError, setCameraError] = useState("");
   const [status, setStatus] = useState("");
-  const [error, setError] = useState("");
+  const [analysisError, setAnalysisError] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
   const [mood, setMood] = useState<MoodResult | null>(null);
   const [fallbackMood, setFallbackMood] = useState("");
 
@@ -44,7 +46,7 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
           setStreaming(true);
         }
       } catch {
-        setError("Camera not available. Use mood selector below.");
+        setCameraError("Camera not available. Use mood selector below.");
       }
     }
     startCamera();
@@ -93,8 +95,10 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
   }
 
   async function analyze() {
+    if (analyzing) return;
+    setAnalyzing(true);
     onLoading?.(true);
-    setError("");
+    setAnalysisError("");
 
     try {
       // Step 1: Get mood
@@ -140,9 +144,10 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
       setStatus("");
       onVerdict?.(verdict, detectedMood, weather);
     } catch (err) {
-      setError("System failure. The sandwich remains unknown.");
+      setAnalysisError("System failure. The sandwich remains unknown.");
       console.error(err);
     } finally {
+      setAnalyzing(false);
       onLoading?.(false);
     }
   }
@@ -165,7 +170,7 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
           />
         ) : (
           <div className="flex items-center justify-center h-48 text-zinc-500 text-sm">
-            {error || "Camera unavailable"}
+            {cameraError || "Camera unavailable"}
           </div>
         )}
         <canvas ref={canvasRef} className="hidden" />
@@ -197,15 +202,16 @@ export default function Webcam({ onVerdict, onLoading }: WebcamProps) {
         <p className="text-yellow-400 text-xs font-mono animate-pulse">{status}</p>
       )}
 
-      {error && (
-        <p className="text-red-400 text-xs">{error}</p>
+      {analysisError && (
+        <p className="text-red-400 text-xs">{analysisError}</p>
       )}
 
       <button
         onClick={analyze}
-        className="px-8 py-3 bg-green-600 hover:bg-green-500 text-black font-bold rounded-full text-sm uppercase tracking-widest transition-colors"
+        disabled={analyzing}
+        className="px-8 py-3 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-bold rounded-full text-sm uppercase tracking-widest transition-colors"
       >
-        What should I eat?
+        {analyzing ? "Computing..." : "What should I eat?"}
       </button>
     </div>
   );

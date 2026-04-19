@@ -72,7 +72,8 @@ export default function EnterpriseDash() {
               <button
                 key={q}
                 onClick={() => query(q)}
-                className="text-left text-xs border border-green-900 px-3 py-2 hover:border-green-500 hover:text-green-300 transition-colors text-green-600"
+                disabled={loading}
+                className="text-left text-xs border border-green-900 px-3 py-2 hover:border-green-500 hover:text-green-300 transition-colors text-green-600 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 &gt; {q}
               </button>
